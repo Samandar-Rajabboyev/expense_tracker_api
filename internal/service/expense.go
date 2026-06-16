@@ -12,8 +12,8 @@ type ExpenseService struct {
 	repo repository.ExpenseRepository
 }
 
-func NewExpenseService(repo *repository.ExpenseRepository) *ExpenseService {
-	return &ExpenseService{repo: *repo}
+func NewExpenseService(repo repository.ExpenseRepository) *ExpenseService {
+	return &ExpenseService{repo: repo}
 }
 
 func (s *ExpenseService) Create(ctx context.Context, userID int64, title string, amount float64, category, description string, date string) (*model.Expense, error) {

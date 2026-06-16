@@ -7,19 +7,19 @@ import (
 	"expense-tracker-api/internal/model"
 )
 
-type UserRepository struct {
+type UserRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *gorm.DB) *UserRepositoryImpl {
+	return &UserRepositoryImpl{db: db}
 }
 
-func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
+func (r *UserRepositoryImpl) Create(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
 
-func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+func (r *UserRepositoryImpl) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
 	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.U
 	return &user, nil
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, error) {
+func (r *UserRepositoryImpl) GetByID(ctx context.Context, id int64) (*model.User, error) {
 	var user model.User
 	if err := r.db.WithContext(ctx).First(&user, id).Error; err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, er
 	return &user, nil
 }
 
-func (r *UserRepository) GetByIDWithExpenses(ctx context.Context, id int64) (*model.User, error) {
+func (r *UserRepositoryImpl) GetByIDWithExpenses(ctx context.Context, id int64) (*model.User, error) {
 	var user model.User
 	if err := r.db.WithContext(ctx).Preload("Expenses").First(&user, id).Error; err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (r *UserRepository) GetByIDWithExpenses(ctx context.Context, id int64) (*mo
 	return &user, nil
 }
 
-func (r *UserRepository) CreateUserWithExpense(ctx context.Context, user *model.User, expense *model.Expense) error {
+func (r *UserRepositoryImpl) CreateUserWithExpense(ctx context.Context, user *model.User, expense *model.Expense) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(user).Error; err != nil {
 			return err
@@ -57,7 +57,7 @@ func (r *UserRepository) CreateUserWithExpense(ctx context.Context, user *model.
 	})
 }
 
-func (r *UserRepository) DeleteUserWithExpense(ctx context.Context, id int64) error {
+func (r *UserRepositoryImpl) DeleteUserWithExpense(ctx context.Context, id int64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(&model.Expense{}, "user_id = ?", id).Error; err != nil {
 			return err
