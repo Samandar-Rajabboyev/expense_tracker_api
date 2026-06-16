@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"expense-tracker-api/internal/cache"
 	"expense-tracker-api/internal/config"
 	"expense-tracker-api/internal/database"
 	"expense-tracker-api/internal/handler"
@@ -27,11 +28,13 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
+	redisCache := cache.NewCache(cfg.RedisURL)
+
 	userRepo := repository.NewUserRepository(db)
 	expenseRepo := repository.NewExpenseRepository(db)
 
 	userService := service.NewUserService(userRepo)
-	expenseService := service.NewExpenseService(expenseRepo)
+	expenseService := service.NewExpenseService(expenseRepo, redisCache)
 	jwtService := jwt.NewJWTService(cfg.JWTSecret)
 
 	userHandler := handler.NewUserHandler(userService, jwtService)

@@ -4,6 +4,7 @@ import (
 	"expense-tracker-api/internal/model"
 	"expense-tracker-api/internal/response"
 	"expense-tracker-api/internal/service"
+	"fmt"
 	"time"
 
 	// "net/http"
@@ -84,6 +85,15 @@ func (h *ExpenseHandler) GetAll(c *gin.Context) {
 		return
 	}
 
+	etag := fmt.Sprintf("\"%d\"", len(expenses))
+
+	if c.GetHeader("If-None-Match") == etag {
+		c.Status(304)
+		return
+	}
+
+	c.Header("Cache-Control", "max-age=300")
+	c.Header("ETag", etag)
 	response.Success(c, 200, expenses)
 }
 
