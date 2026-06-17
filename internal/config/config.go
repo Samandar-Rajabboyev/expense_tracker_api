@@ -10,6 +10,7 @@ type Config struct {
 	Port        string
 	JWTSecret   string
 	RedisURL    string
+	LogLevel    string
 }
 
 func Load() (*Config, error) {
@@ -20,5 +21,6 @@ func Load() (*Config, error) {
 		Port:        os.Getenv("PORT"),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
 		RedisURL:    os.Getenv("REDIS_URL"),
+		LogLevel:    os.Getenv("LOG_LEVEL"),
 	}, nil
 }

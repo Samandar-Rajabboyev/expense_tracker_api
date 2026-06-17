@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,6 +13,7 @@ import (
 	"expense-tracker-api/internal/database"
 	"expense-tracker-api/internal/handler"
 	"expense-tracker-api/internal/jwt"
+	"expense-tracker-api/internal/metrics"
 	"expense-tracker-api/internal/middleware"
 	"expense-tracker-api/internal/repository"
 	"expense-tracker-api/internal/service"
@@ -21,16 +21,35 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
+
+func parseLogLevel(level string) zerolog.Level {
+	switch level {
+	case "debug":
+		return zerolog.DebugLevel
+	case "warn":
+		return zerolog.WarnLevel
+	case "error":
+		return zerolog.ErrorLevel
+	default:
+		return zerolog.InfoLevel
+	}
+}
 
 func main() {
 	godotenv.Load()
 
 	cfg, _ := config.Load()
 
+	zerolog.SetGlobalLevel(parseLogLevel(cfg.LogLevel))
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
 	db, err := database.NewDB(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		log.Fatal().Err(err).Msg("failed to connect to database")
 	}
 
 	redisCache := cache.NewCache(cfg.RedisURL)
@@ -54,6 +73,10 @@ func main() {
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
 	r.Use(cors.New(corsConfig))
+	r.Use(middleware.RequestLogger())
+	r.Use(metrics.Middleware())
+
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -106,24 +129,24 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			log.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
 
-	log.Printf("Server starting on :%s", port)
+	log.Info().Str("port", port).Msg("Server starting")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	<-ctx.Done()
 
-	log.Println("Shutting down gracefully...")
+	log.Info().Msg("Shutting down gracefully...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Fatal().Err(err).Msg("Server forced to shutdown")
 	}
 
-	log.Println("Server exited properly")
+	log.Info().Msg("Server exited properly")
 }
