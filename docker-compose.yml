@@ -1,6 +1,32 @@
 services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080/ready",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     container_name: pg
     environment:
       POSTGRES_USER: admin
@@ -14,6 +40,9 @@ services:
       test: ["CMD-SHELL", "pg_isready -U admin -d expensedb"]
       interval: 5s
       retries: 5
-
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 volumes:
   pgdata:

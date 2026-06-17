@@ -29,3 +29,7 @@ func (c *Cache) Get(ctx context.Context, key string) (string, error) {
 func (c *Cache) Delete(ctx context.Context, key string) error {
 	return c.client.Del(ctx, key).Err()
 }
+
+func (c *Cache) Ping(ctx context.Context) error {
+	return c.client.Ping(ctx).Err()
+}
